@@ -1,0 +1,4 @@
+clang -Xclang -ast-dump=json -fsyntax-only input_sample.cpp > ast.json
+
+this is command for generating ast 
+this will store the ast into a ast.json file for further use

@@ -720,21 +720,17 @@ def load_and_process():
     global AST
     
     try:
-        # Try UTF-16 first (common for Windows Clang output)
-        with open("ast1.json", encoding="utf-16") as f:
+        # Always use UTF-8 (correct for Clang JSON output)
+        with open("ast1.json", "r", encoding="utf-8") as f:
             AST = json.load(f)
-    except UnicodeDecodeError:
-        # Try UTF-8 if UTF-16 fails
-        try:
-            with open("ast1.json", encoding="utf-8") as f:
-                AST = json.load(f)
-        except UnicodeDecodeError:
-            # Try with default encoding as last resort
-            with open("ast1.json", encoding="latin-1") as f:
-                AST = json.load(f)
+
     except json.JSONDecodeError as e:
         print(f"[ERROR] Invalid JSON in ast1.json: {e}")
         print("Make sure the file was generated correctly by Clang")
+        sys.exit(1)
+
+    except Exception as e:
+        print(f"[ERROR] Failed to read ast1.json: {e}")
         sys.exit(1)
     
     if not AST:
@@ -899,20 +895,13 @@ def generate_nlp_summary():
 
 # ================= RUN =================
 
-if __name__ == "__main__":
+def run_function():
     try:
         load_and_process()
         print_human_readable()
         save_json_ir()
         generate_nlp_summary()
         
-        #print("\n" + "="*80)
-        #print("ANALYSIS COMPLETE")
-        #print("="*80)
-        #print("\nGenerated files:")
-        #print("  1. cpp_ir_output.json  - Complete structured IR")
-        #print("  2. nlp_summary.json    - NLP-ready summaries")
-        #print("\nThese files are ready for comment generation!")
     except FileNotFoundError:
         print("\n[ERROR] File 'ast1.json' not found!")
         print("Please generate AST first using:")
@@ -923,3 +912,6 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
+
+if __name__ == "__main__":
+    run_function()

@@ -1,1 +1,6 @@
 command.txt
+ast1.json
+nlp_summary.json
+input.cpp
+cpp_ir_output.json
+__pycache__/

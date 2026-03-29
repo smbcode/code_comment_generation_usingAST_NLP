@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroAST | Code Comment Generator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="navbar">
+            <div class="brand">
+                <i class="fa-solid fa-microchip logo-icon"></i>
+                <h1 class="logo-text">NeuroAST <span>Code Comment Generator</span></h1>
+            </div>
+            <div class="actions">
+                <button id="generateBtn" class="btn-primary">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Generate Comments
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <!-- Left Pane: Code Editor -->
+            <section class="pane editor-pane">
+                <div class="pane-header">
+                    <span class="badge cpp-badge">C++</span>
+                    <h2>Source Code</h2>
+                </div>
+                <!-- Monaco Editor Mount Point -->
+                <div id="editor-container"></div>
+            </section>
+
+            <!-- Right Pane: Output -->
+            <section class="pane output-pane">
+                <div class="pane-header">
+                    <span class="badge ai-badge">AI</span>
+                    <h2>Analysis & Comments</h2>
+                </div>
+                <div id="output-container" class="output-content">
+                    <div class="empty-state">
+                        <div class="pulse-ring"></div>
+                        <i class="fa-solid fa-code-branch icon-large"></i>
+                        <h3>Awaiting Input</h3>
+                        <p>Write or paste your C++ code on the left and click <strong>Generate Comments</strong> to extract the AST and generate neurosymbolic documentation.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <!-- Core Application Script -->
+    <script src="script.js"></script>
+</body>
+</html>

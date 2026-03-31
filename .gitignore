@@ -1,6 +1,14 @@
+# Temporary execution outputs
 command.txt
 ast1.json
 nlp_summary.json
 input.cpp
 cpp_ir_output.json
 __pycache__/
+
+*.gguf
+neurosymbolic-llama3-lora/
+outputs/
+unsloth_compiled_cache/
+
+neurosymbolic_training_dataset.jsonl

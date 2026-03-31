@@ -23,6 +23,7 @@ int main() {
 }`;
 
 let editorInstance;
+let outputEditorInstance;
 
 // Auto-load Monaco editor when AMD require is ready
 require(['vs/editor/editor.main'], function() {
@@ -65,6 +66,20 @@ require(['vs/editor/editor.main'], function() {
         cursorBlinking: "smooth",
         cursorSmoothCaretAnimation: "on"
     });
+
+    outputEditorInstance = monaco.editor.create(document.getElementById('output-editor'), {
+        value: "// Generated code will appear here...",
+        language: 'cpp',
+        theme: 'neuro-dark',
+        automaticLayout: true,
+        fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+        fontSize: 14,
+        readOnly: true,
+        minimap: { enabled: false },
+        padding: { top: 16, bottom: 16 },
+        scrollBeyondLastLine: false,
+        smoothScrolling: true
+    });
 });
 
 // UI Interaction
@@ -73,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const outputContainer = document.getElementById("output-container");
     const emptyState = document.querySelector(".empty-state");
 
-    generateBtn.addEventListener("click", () => {
+    generateBtn.addEventListener("click", async () => {
         // Validate editor is loaded
         if (!editorInstance) return;
 
@@ -89,52 +104,58 @@ document.addEventListener("DOMContentLoaded", () => {
         generateBtn.classList.add("loading");
         const originalText = generateBtn.innerHTML;
         generateBtn.innerHTML = '<i class="fa-solid fa-spinner"></i> Analyzing AST...';
-        
-        // Remove empty state if present
-        if (emptyState) {
-            outputContainer.innerHTML = '';
-        }
 
-        // MOCK BACKEND REQUEST (Timeout to simulate network/processing delay)
-        setTimeout(() => {
-            // Restore button
+        try {
+            // Make real API request to our FastAPI backend
+            const response = await fetch("http://127.0.0.1:8000/api/generate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ code: currentCode })
+            });
+
+            if (!response.ok) {
+                throw new Error("Server error: " + response.statusText);
+            }
+
+            const data = await response.json();
+            
+            // Display the new Output Editor and hide the empty state
+            const emptyStateWrapper = document.getElementById("empty-state-wrapper");
+            const outputEditorEl = document.getElementById("output-editor");
+            
+            if (emptyStateWrapper) emptyStateWrapper.style.display = "none";
+            outputEditorEl.style.display = "flex";
+
+            // Inject the commented code natively
+            if (data.commented_code) {
+                outputEditorInstance.setValue(data.commented_code);
+            } else {
+                outputEditorInstance.setValue("// An error occurred: No code returned from backend.");
+            }
+            outputEditorInstance.layout();
+
+            // Restore button state
             generateBtn.classList.remove("loading");
             generateBtn.innerHTML = originalText;
 
-            // Render mock results
-            renderMockResults();
-        }, 1500); 
-    });
-    
-    function renderMockResults() {
-        // This is a placeholder for when we actually plug in the neurosymbolic layout
-        // For now, it dynamically injects HTML simulating an NLP summary
-
-        const resultHTML = `
-            <div class="result-card" style="animation-delay: 0.1s">
-                <h4><i class="fa-solid fa-microchip"></i> AST Extraction</h4>
-                <p>Successfully extracted 2 functions (<code>fun</code>, <code>main</code>) and 4 local variables. No recursive calls detected.</p>
-            </div>
+        } catch (error) {
+            // Restore button
+            generateBtn.classList.remove("loading");
+            generateBtn.innerHTML = originalText;
             
-            <div class="result-card" style="animation-delay: 0.2s">
-                <h4><i class="fa-solid fa-code-compare"></i> Neurosymbolic Analysis</h4>
-                <p><strong>Intent:</strong> The code performs a basic arithmetic multiplication operation within a dedicated function and outputs the result using standard I/O streams.</p>
-            </div>
-
-            <div class="result-card" style="animation-delay: 0.3s">
-                <h4><i class="fa-solid fa-comment-dots"></i> Generated Documentation</h4>
-                <p style="font-family: monospace; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; border: 1px solid var(--border-color); color: #fff;">
-/**
- * Executes a basic entry-point routine.
- * Initializes test parameters, performs a multiplication via fun(),
- * and streams the result '45' to standard output.
- * @returns {int} Exit status code.
- */
-                </p>
-            </div>
-        `;
-
-        // We replace the inner HTML to ensure freshness
-        outputContainer.innerHTML = resultHTML;
-    }
+            // If the editor is already showing, we can put the error inside it
+            if (outputEditorInstance) {
+                const emptyStateWrapper = document.getElementById("empty-state-wrapper");
+                const outputEditorEl = document.getElementById("output-editor");
+                if (emptyStateWrapper) emptyStateWrapper.style.display = "none";
+                outputEditorEl.style.display = "flex";
+                
+                outputEditorInstance.setValue(`/*\n * API ERROR\n * ${error.message}\n */`);
+            } else {
+                alert("Analysis Failed: " + error.message);
+            }
+        }
+    });
 });

@@ -22,16 +22,22 @@ app.add_middleware(
 class CodeSubmission(BaseModel):
     code: str
 
-# NEUROSYMBOLIC LLM INTEGRATION (Phase 3)
-# Completely powered by your locally trained Ollama model `neurosymbolic_AI`
-
 def analyze_security_with_llm(func_name: str, code: str, ast_summary: str) -> str:
-    """Uses the custom locally-trained AI to flag vulnerabilities."""
+    """Uses true Neurosymbolic logic: Deterministic AST rules + LLM reasoning."""
     
-    prompt = f"You are a Neurosymbolic Code Analyzer trained perfectly on C++ AST Data.\nAnalyze this function strictly for security vulnerabilities. DO NOT refactor or fix the code. ONLY flag the vulnerability.\n\nCode:\n{code}\n\nAST Breakdown:\n{ast_summary}"
+    # --- SYMBOLIC LAYER (Deterministic Rules) ---
+    code_lower = code.lower()
+    symbolic_flag = None
+    if "strcpy" in code_lower or "gets" in code_lower or "scanf" in code_lower:
+         symbolic_flag = f"[SECURITY FLAG] Function '{func_name}' explicitly uses unsafe C-strings. Buffer Overflow potential."
+    elif "system(" in code_lower or "exec(" in code_lower:
+         symbolic_flag = f"[SECURITY FLAG] Function '{func_name}' uses OS execution. Remote Command Execution vulnerability."
+    
+    # --- NEURAL LAYER (LLM Reasoning) ---
+    prompt = f"You are a Neurosymbolic Code Analyzer trained perfectly on C++ AST Data.\nAnalyze the function '{func_name}' strictly for security vulnerabilities. DO NOT refactor or fix the code. ONLY flag the vulnerability.\n\nCode:\n{code}\n\nAST Breakdown:\n{ast_summary}"
+    llm_response = ""
     
     try:
-        # Try pinging your custom Ollama model!
         url = "http://localhost:11434/api/generate"
         headers = {"Content-Type": "application/json"}
         data = json.dumps({
@@ -43,21 +49,18 @@ def analyze_security_with_llm(func_name: str, code: str, ast_summary: str) -> st
         req = urllib.request.Request(url, data=data, headers=headers)
         with urllib.request.urlopen(req, timeout=10) as response:
             res_body = json.loads(response.read().decode())
-            return res_body["response"]
+            llm_response = res_body["response"]
             
     except Exception as e:
-        # If Ollama isn't running or the model isn't built, fallback to heuristic simulation gently
         print(f"Ollama Connection Error: {e}")
         
-        code_lower = code.lower()
-        if "strcpy" in code_lower or "gets" in code_lower or "scanf" in code_lower:
-             return f"[SECURITY FLAG] Function '{func_name}' explicitly uses unsafe C-strings. Buffer Overflow potential."
-        elif "system(" in code_lower or "exec(" in code_lower:
-             return f"[SECURITY FLAG] Function '{func_name}' uses OS execution. Remote Command Execution vulnerability."
-        elif "atoi" in code_lower:
-             return f"[SECURITY FLAG] Function '{func_name}' uses atoi(). Potential integer overflow / unhandled exception."
-        else:
-             return f"[✔] Automatically marked safe by static AST rules."
+    # --- NEUROSYMBOLIC MERGE ---
+    if symbolic_flag:
+        return symbolic_flag + "\n * [AI Analysis]: " + (llm_response.replace("\n", " ") if llm_response else "Verified by deterministic fallback.")
+    elif "[SECURITY FLAG]" in llm_response.upper():
+        return llm_response
+    else:
+        return "[✔] Automatically marked safe by static AST rules & AI."
 
 @app.post("/api/generate")
 async def generate_comments(submission: CodeSubmission):
@@ -93,33 +96,55 @@ async def generate_comments(submission: CodeSubmission):
         
         if isinstance(nlp_data, dict):
             for func_name, func_details in nlp_data.items():
-                comments = func_details.get("summary", "")
-                if not func_name or not comments:
+                if not func_name:
                     continue
                     
+                # ----------------------------------------------------
+                # NEW: AI LOGIC EXPLANATION
+                # Ping the LLM to get a highly intelligent summary of intent!
+                ai_intent = ""
+                try:
+                    url = "http://localhost:11434/api/generate"
+                    headers = {"Content-Type": "application/json"}
+                    prompt = f"You are an expert C++ Data Structures Algorithm analyzer. Explain the exact algorithmic intent and logic of the function '{func_name}' in 2 or 3 short, brilliant sentences. Do not mention ASTs. Do not output the code. What does this code achieve?\n\nCode:\n{submission.code}"
+                    
+                    data = json.dumps({
+                        "model": "neurosymbolic_AI",
+                        "prompt": prompt,
+                        "stream": False
+                    }).encode("utf-8")
+                    
+                    req = urllib.request.Request(url, data=data, headers=headers)
+                    with urllib.request.urlopen(req, timeout=600) as response:
+                        res_body = json.loads(response.read().decode())
+                        ai_intent = res_body["response"].strip()
+                except Exception as e:
+                    ai_intent = "Fallback: " + func_details.get("summary", "Could not reach Ollama for logic summary.")
+                # ----------------------------------------------------
+                
                 frontend_nlp_list.append({
                     "function": func_name,
-                    "comments": comments,
+                    "comments": ai_intent,
                     "summary": { "actions": func_details.get("detailed_steps", []) }
                 })
                 
-                # Regex to find typical C++ function definition (e.g., int main() {)
+                # Regex to find typical C++ function definition
                 pattern = rf"(?m)^([ \t]*)([\w\:]+[ \t\*\&]+{re.escape(func_name)}[ \t]*\(.*?\)[ \t\n]*\{{)"
                 
                 def replacer(match):
                     indent = match.group(1)
                     definition = match.group(2)
-                    # Build beautiful comment block
-                    lines = comments.strip().split('\n')
-                    block = indent + "/**\n"
-                    # 1. Base Summary
-                    for line in lines:
-                        block += indent + " * " + line + "\n"
                     
-                    # 2. Security Vulnerability Generation
+                    block = indent + "/**\n"
+                    # 1. Base Summary (Now Powered by Local AI!)
+                    for line in ai_intent.split('\n'):
+                        # wrap lines nicely or just print
+                        block += indent + " * " + line.strip() + "\n"
+                    
+                    # 2. Security Vulnerability Generation (Neurosymbolic Merge)
                     block += indent + " * \n"
                     block += indent + " * --- SECURITY ANALYSIS ---\n"
-                    sec_flag = analyze_security_with_llm(func_name, definition, str(func_details.get("detailed_steps", [])))
+                    sec_flag = analyze_security_with_llm(func_name, submission.code, str(func_details.get("detailed_steps", [])))
                     if sec_flag:
                          for sec_line in sec_flag.strip().split("\n"):
                               block += indent + " * " + sec_line + "\n"

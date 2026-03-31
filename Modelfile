@@ -1,1 +1,2 @@
 FROM ./llama-3-8b-instruct.Q4_K_M.gguf
+PARAMETER num_ctx 1024

@@ -42,8 +42,6 @@ def inject_docstring(code, func_name, docstring):
     return commented_code
 
 def get_cpp_dataset():
-    # Since HuggingFace CodeSearchNet doesn't have a C++ split, we dynamically generate
-    # a highly-controlled synthetic dataset here to ensure your training strictly succeeds!
     return [
         {
             "func_name": "add",
@@ -85,45 +83,25 @@ def main():
             docstring = item["docstring"]
             func_name = item["func_name"]
             
-            # Step 1: Write raw code to input.cpp (which the extractor reads)
             with open(TEMP_FILE, "w", encoding="utf-8") as f:
-                # Add basic includes so Clang parses it easily
                 f.write("#include <iostream>\n#include <cstring>\nusing namespace std;\n\n" + code)
                 
-            # Step 2: Run extractor
             result = subprocess.run(
                 ["python", "genrating_ast_running_extractor.py"],
                 capture_output=True, text=True
             )
             
             if result.returncode != 0:
-                continue # Skip functions that fail extraction
-                
-            # Step 3: Get NLP Analysis
-            if not os.path.exists("nlp_summary.json"):
                 continue
                 
-            with open("nlp_summary.json", "r", encoding="utf-8") as f:
-                try:
-                    nlp_data = json.load(f)
-                except:
-                    continue
-            
-            if not nlp_data:
-                continue
-                
-            # Keep the structured features.
             if isinstance(nlp_data, dict):
-                 # Fallback if your script outputs a dict
                  func_data = nlp_data.get(func_name, {})
                  ast_features = func_data.get("summary", {}) if isinstance(func_data, dict) else func_data
             else:
                  ast_features = nlp_data[0].get("summary", {})
             
-            # Form target commented code perfectly formatted
             target_code = inject_docstring(code, func_name, docstring)
             
-            # Write JSONL training row ready for Supervised Fine Tuning (SFT)
             row = {
                 "instruction": "Transform the following C++ AST features into a documented source code function with detailed explanations and security flags.",
                 "input": json.dumps(ast_features),

@@ -4,18 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NeuroAST | Code Comment Generator</title>
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
         <header class="navbar">
             <div class="brand">
                 <i class="fa-solid fa-microchip logo-icon"></i>
@@ -29,43 +26,34 @@
             </div>
         </header>
 
-        <!-- Main Workspace -->
         <main class="workspace">
-            <!-- Left Pane: Code Editor -->
             <section class="pane editor-pane">
                 <div class="pane-header">
                     <span class="badge cpp-badge">C++</span>
                     <h2>Source Code</h2>
                 </div>
-                <!-- Monaco Editor Mount Point -->
                 <div id="editor-container"></div>
             </section>
 
-            <!-- Right Pane: Output -->
             <section class="pane output-pane">
                 <div class="pane-header">
                     <span class="badge ai-badge">AI</span>
                     <h2>Commented Source Code</h2>
                 </div>
-                <!-- Container for Monaco Editor or Empty State -->
                 <div id="output-container" style="flex: 1; display: flex; flex-direction: column; position: relative;">
-                    <!-- Empty State -->
                     <div id="empty-state-wrapper" class="empty-state" style="margin: auto;">
                         <div class="pulse-ring"></div>
                         <i class="fa-solid fa-code-branch icon-large"></i>
                         <h3>Awaiting Input</h3>
                         <p>Write or paste your C++ code on the left and click <strong>Generate Comments</strong>...</p>
                     </div>
-                    <!-- Output Monaco Editor Mount Point (Hidden initially) -->
                     <div id="output-editor" style="display: none; width: 100%; height: 100%; min-height: 400px; flex: 1;"></div>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
-    <!-- Core Application Script -->
     <script src="script.js"></script>
 </body>
 </html>

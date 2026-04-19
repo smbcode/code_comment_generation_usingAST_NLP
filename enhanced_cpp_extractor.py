@@ -3,42 +3,28 @@ import sys
 from collections import defaultdict
 from typing import Dict, List, Any, Optional
 
-# Set UTF-8 encoding for console output (Windows compatibility)
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding='utf-8')
     except:
         pass  # Python < 3.7 doesn't have reconfigure
 
-# ================= C++ KEYWORDS & OPERATORS =================
 CPP_KEYWORDS = {
-    # Control Flow
     "if", "else", "switch", "case", "default", "break", "continue",
     "for", "while", "do", "goto", "return",
-    
-    # Type Keywords
     "void", "bool", "char", "int", "float", "double", "long", "short",
     "signed", "unsigned", "auto", "const", "static", "extern", "register",
     "volatile", "mutable", "constexpr", "decltype", "typedef",
-    
-    # OOP Keywords
     "class", "struct", "union", "enum", "namespace", "template",
     "typename", "public", "private", "protected", "virtual", "friend",
     "this", "operator", "new", "delete", "explicit", "inline",
-    
-    # Memory & Pointers
     "sizeof", "alignof", "nullptr",
-    
-    # Exception Handling
     "try", "catch", "throw", "noexcept",
-    
-    # C++11+ Keywords
     "constexpr", "static_assert", "thread_local", "override", "final",
     "nullptr", "alignas", "decltype", "noexcept"
 }
 
 OPERATOR_MAP = {
-    # Arithmetic
     "+": "addition",
     "-": "subtraction",
     "*": "multiplication",
@@ -46,29 +32,21 @@ OPERATOR_MAP = {
     "%": "modulus",
     "++": "increment",
     "--": "decrement",
-    
-    # Comparison
     "<": "less than",
     ">": "greater than",
     "<=": "less than or equal to",
     ">=": "greater than or equal to",
     "==": "equal to",
     "!=": "not equal to",
-    
-    # Logical
     "&&": "logical and",
     "||": "logical or",
     "!": "logical not",
-    
-    # Bitwise
     "&": "bitwise and",
     "|": "bitwise or",
     "^": "bitwise xor",
     "~": "bitwise not",
     "<<": "left shift",
     ">>": "right shift",
-    
-    # Assignment
     "=": "assignment",
     "+=": "add and assign",
     "-=": "subtract and assign",
@@ -90,7 +68,6 @@ LOGICAL_OPS = {
     "&&", "||", "!"
 }
 
-# ================= GLOBAL STATE =================
 
 IR = {}
 GLOBAL_METADATA = {
@@ -106,8 +83,6 @@ GLOBAL_METADATA = {
 current_function = None
 current_target = None
 current_scope = "global"
-
-# ================= TYPE NORMALIZATION =================
 
 def normalize_type(type_info):
     """Extract and normalize C++ type information"""
@@ -128,7 +103,6 @@ def normalize_type(type_info):
         "raw_type": qual_type
     }
     
-    # Extract qualifiers
     if "const" in qual_type:
         result["qualifiers"].append("const")
         result["is_const"] = True
@@ -142,14 +116,12 @@ def normalize_type(type_info):
         result["qualifiers"].append("volatile")
         GLOBAL_METADATA["keywords_used"].add("volatile")
     
-    # Check for pointer/reference
     if "*" in qual_type:
         result["is_pointer"] = True
     
     if "&" in qual_type:
         result["is_reference"] = True
     
-    # Normalize base type
     clean_type = qual_type.replace("const", "").replace("static", "").replace("*", "").replace("&", "").strip()
     
     if "int" in clean_type or clean_type in ["short", "long", "unsigned", "signed"]:
@@ -181,8 +153,6 @@ def normalize_type(type_info):
     
     return result
 
-# ================= EXTRACTION HELPERS =================
-
 def extract_var(node):
     """Extract variable name or literal value"""
     if not isinstance(node, dict):
@@ -212,7 +182,6 @@ def extract_var(node):
         operand = extract_var(node.get("inner", [{}])[0])
         return f"{op}{operand}" if operand else None
     
-    # Recurse through child nodes
     for child in node.get("inner", []):
         result = extract_var(child)
         if result is not None:
@@ -269,7 +238,6 @@ def extract_condition(node):
             "operand": operand
         }
     
-    # Recurse
     for child in node.get("inner", []):
         cond = extract_condition(child)
         if cond:
@@ -379,14 +347,13 @@ def traverse(node, parent_kind=None):
                     "has_recursion": False
                 },
                 "complexity": {
-                    "cyclomatic": 1,  # Base complexity
+                    "cyclomatic": 1,
                     "nesting_depth": 0
                 },
                 "keywords_used": set(),
                 "operators_used": set()
             }
         elif fname:
-            # Update current_function even for duplicates to track context
             current_function = fname
     
     # ========== PARAMETERS ==========
@@ -406,7 +373,6 @@ def traverse(node, parent_kind=None):
             if current_function:
                 IR[current_function]["local_variables"][var_name] = var_type
                 
-                # Track initialization
                 init_expr = None
                 for child in node.get("inner", []):
                     init_expr = extract_var(child)
@@ -428,7 +394,6 @@ def traverse(node, parent_kind=None):
                     "type": var_type
                 })
             
-            # Handle initialization separately
             prev_target = current_target
             current_target = var_name
             for child in node.get("inner", []):
@@ -442,10 +407,7 @@ def traverse(node, parent_kind=None):
         
         lhs_node = node.get("inner", [{}])[0]
         current_target = extract_var(lhs_node)
-        
-        # Check for array assignment
         array_info = extract_array_info(lhs_node)
-        
         traverse(node.get("inner", [{}, {}])[1], kind)
         return
     
@@ -465,7 +427,7 @@ def traverse(node, parent_kind=None):
                 if "complexity" in IR[current_function]:
                     IR[current_function]["complexity"]["cyclomatic"] += 1
             
-            if op not in ["=", "+=", "-=", "*=", "/=", "%="]:  # Not assignment
+            if op not in ["=", "+=", "-=", "*=", "/=", "%="]:
                 IR[current_function]["actions"].append({
                     "type": "operation",
                     "operation": OPERATOR_MAP[op],
@@ -495,7 +457,6 @@ def traverse(node, parent_kind=None):
             if "complexity" in IR[current_function]:
                 IR[current_function]["complexity"]["cyclomatic"] += 1
             
-            # Extract loop components
             inner = node.get("inner", [])
             init_expr = extract_var(inner[0]) if len(inner) > 0 else None
             condition = extract_condition(inner[1]) if len(inner) > 1 else None
@@ -645,7 +606,6 @@ def traverse(node, parent_kind=None):
                 args.append(arg)
         
         if current_function:
-            # Check for recursion
             if callee == current_function:
                 IR[current_function]["control_flow"]["has_recursion"] = True
             
@@ -687,7 +647,6 @@ def traverse(node, parent_kind=None):
     
     # ========== INPUT/OUTPUT ==========
     if kind == "CXXOperatorCallExpr":
-        # Check for cout/cin
         inner = node.get("inner", [])
         if inner:
             first_child = inner[0]
@@ -710,7 +669,7 @@ def traverse(node, parent_kind=None):
     
     # ========== RECURSE ==========
     for key, value in node.items():
-        if key != "kind":  # Avoid infinite recursion on kind
+        if key != "kind":
             traverse(value, kind)
 
 # ================= MAIN EXECUTION =================
@@ -720,7 +679,6 @@ def load_and_process():
     global AST
     
     try:
-        # Always use UTF-8 (correct for Clang JSON output)
         with open("ast1.json", "r", encoding="utf-8") as f:
             AST = json.load(f)
 
@@ -740,7 +698,6 @@ def load_and_process():
     print("Processing AST...")
     traverse(AST)
     
-    # Convert sets to lists for JSON serialization
     GLOBAL_METADATA["keywords_used"] = sorted(list(GLOBAL_METADATA["keywords_used"]))
     GLOBAL_METADATA["operators_used"] = sorted(list(GLOBAL_METADATA["operators_used"]))
     
@@ -748,13 +705,9 @@ def load_and_process():
         IR[func_name]["keywords_used"] = sorted(list(IR[func_name]["keywords_used"]))
         IR[func_name]["operators_used"] = sorted(list(IR[func_name]["operators_used"]))
 
-# ================= OUTPUT FORMATTING =================
-
 def print_human_readable():
     """Print human-readable representation"""
     print("C++ CODE ANALYSIS - INTERMEDIATE REPRESENTATION")
-    
-    # Global Metadata
     print("\n[GLOBAL METADATA]")
     print("-" * 80)
     print(f"Keywords used: {', '.join(GLOBAL_METADATA['keywords_used'])}")
@@ -774,27 +727,22 @@ def print_human_readable():
     
     print(f"Functions defined: {', '.join(GLOBAL_METADATA['functions'])}")
     
-    # Function Details
     for func_name, data in IR.items():
         print(f"\n[FUNCTION: {func_name}]")
         print("-" * 80)
         
-        # Return type
         ret_type = data["return_type"]
         print(f"Returns: {ret_type['base_type']}" + 
               (f" ({', '.join(ret_type['qualifiers'])})" if ret_type['qualifiers'] else ""))
         
-        # Parameters
         if data["parameters"]:
             print(f"\nParameters:")
             for param_name, param_type in data["parameters"].items():
                 print(f"  -- {param_name}: {param_type['base_type']}" + 
                       (f" ({', '.join(param_type['qualifiers'])})" if param_type['qualifiers'] else ""))
         
-        # Local Variables
         if data["local_variables"]:
             print(f"\nLocal Variables:")
-            # Group by type
             type_groups = defaultdict(list)
             for var_name, var_type in data["local_variables"].items():
                 type_groups[var_type['base_type']].append(var_name)
@@ -802,7 +750,6 @@ def print_human_readable():
             for type_name, vars in type_groups.items():
                 print(f"  -- {type_name}: {', '.join(vars)}")
         
-        # Control Flow
         cf = data["control_flow"]
         complexity_data = data.get("complexity", {"cyclomatic": 1, "nesting_depth": 0})
         print(f"\nControl Flow:")
@@ -811,13 +758,11 @@ def print_human_readable():
         print(f"  -- Is recursive: {cf['has_recursion']}")
         print(f"  -- Cyclomatic complexity: {complexity_data.get('cyclomatic', 1)}")
         
-        # Keywords & Operators
         if data["keywords_used"]:
             print(f"\nKeywords: {', '.join(data['keywords_used'])}")
         if data["operators_used"]:
             print(f"Operators: {', '.join(data['operators_used'])}")
         
-        # Actions
         if data["actions"]:
             print(f"\nExecution Flow ({len(data['actions'])} steps):")
             for i, action in enumerate(data["actions"], 1):
@@ -844,7 +789,6 @@ def generate_nlp_summary():
     for func_name, data in IR.items():
         summary_parts = []
         
-        # Function signature
         ret = data["return_type"]["base_type"]
         params = data["parameters"]
         
@@ -856,12 +800,10 @@ def generate_nlp_summary():
         
         summary_parts.append(f"and returns {ret}.")
         
-        # Variables
         if data["local_variables"]:
             var_count = len(data["local_variables"])
             summary_parts.append(f"It declares {var_count} local variable(s).")
         
-        # Control flow
         cf = data["control_flow"]
         if cf["has_loops"]:
             summary_parts.append("The function contains iterative loops.")
@@ -870,7 +812,6 @@ def generate_nlp_summary():
         if cf["has_recursion"]:
             summary_parts.append("The function is recursive.")
         
-        # Step-by-step actions
         if data["actions"]:
             summary_parts.append(f"The function performs {len(data['actions'])} main operations:")
             action_summary = [f"  {i}. {action['natural']}" for i, action in enumerate(data["actions"], 1)]
@@ -892,8 +833,6 @@ def generate_nlp_summary():
         json.dump(nlp_output, f, indent=2, ensure_ascii=False)
     
     print(f"[SUCCESS] NLP summary saved to 'nlp_summary.json'\n")
-
-# ================= RUN =================
 
 def run_function():
     try:

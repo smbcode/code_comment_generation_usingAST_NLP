@@ -10,7 +10,6 @@ import urllib.parse
 
 app = FastAPI(title="NeuroAST Backend")
 
-# Allow the frontend to communicate with localhost API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -25,7 +24,6 @@ class CodeSubmission(BaseModel):
 def analyze_security_with_llm(func_name: str, code: str, ast_summary: str) -> str:
     """Uses true Neurosymbolic logic: Deterministic AST rules + LLM reasoning."""
     
-    # --- SYMBOLIC LAYER (Deterministic Rules) ---
     code_lower = code.lower()
     symbolic_flag = None
     if "strcpy" in code_lower or "gets" in code_lower or "scanf" in code_lower:
@@ -33,7 +31,6 @@ def analyze_security_with_llm(func_name: str, code: str, ast_summary: str) -> st
     elif "system(" in code_lower or "exec(" in code_lower:
          symbolic_flag = f"[SECURITY FLAG] Function '{func_name}' uses OS execution. Remote Command Execution vulnerability."
     
-    # --- NEURAL LAYER (LLM Reasoning) ---
     prompt = f"You are a Neurosymbolic Code Analyzer trained perfectly on C++ AST Data.\nAnalyze the function '{func_name}' strictly for security vulnerabilities. DO NOT refactor or fix the code. ONLY flag the vulnerability.\n\nCode:\n{code}\n\nAST Breakdown:\n{ast_summary}"
     llm_response = ""
     
@@ -54,22 +51,19 @@ def analyze_security_with_llm(func_name: str, code: str, ast_summary: str) -> st
     except Exception as e:
         print(f"Ollama Connection Error: {e}")
         
-    # --- NEUROSYMBOLIC MERGE ---
     if symbolic_flag:
         return symbolic_flag + "\n * [AI Analysis]: " + (llm_response.replace("\n", " ") if llm_response else "Verified by deterministic fallback.")
     elif "[SECURITY FLAG]" in llm_response.upper():
         return llm_response
     else:
-        return "[✔] Automatically marked safe by static AST rules & AI."
+        return "Automatically marked safe by static AST rules & AI."
 
 @app.post("/api/generate")
 async def generate_comments(submission: CodeSubmission):
     try:
-        # Step 1: Write the user's code to input.cpp
         with open("input.cpp", "w", encoding="utf-8") as f:
             f.write(submission.code)
 
-        # Step 2: Execute the extraction script
         result = subprocess.run(
             ["python", "genrating_ast_running_extractor.py"],
             capture_output=True,
@@ -80,7 +74,6 @@ async def generate_comments(submission: CodeSubmission):
             print("Clang Error:", result.stderr)
             raise HTTPException(status_code=500, detail=f"C++ Compilation/Extraction failed: {result.stderr}")
 
-        # Step 3: Read output files
         if not os.path.exists("cpp_ir_output.json") or not os.path.exists("nlp_summary.json"):
              raise HTTPException(status_code=500, detail="Extractor finished but did not produce output files.")
 
@@ -90,7 +83,6 @@ async def generate_comments(submission: CodeSubmission):
         with open("nlp_summary.json", "r", encoding="utf-8") as f:
             nlp_data = json.load(f)
 
-        # Step 4: Inject Comments Intelligently into Source Code
         commented_code = submission.code
         frontend_nlp_list = []
         
@@ -98,10 +90,6 @@ async def generate_comments(submission: CodeSubmission):
             for func_name, func_details in nlp_data.items():
                 if not func_name:
                     continue
-                    
-                # ----------------------------------------------------
-                # NEW: AI LOGIC EXPLANATION
-                # Ping the LLM to get a highly intelligent summary of intent!
                 ai_intent = ""
                 try:
                     url = "http://localhost:11434/api/generate"
@@ -120,7 +108,6 @@ async def generate_comments(submission: CodeSubmission):
                         ai_intent = res_body["response"].strip()
                 except Exception as e:
                     ai_intent = "Fallback: " + func_details.get("summary", "Could not reach Ollama for logic summary.")
-                # ----------------------------------------------------
                 
                 frontend_nlp_list.append({
                     "function": func_name,
@@ -128,7 +115,6 @@ async def generate_comments(submission: CodeSubmission):
                     "summary": { "actions": func_details.get("detailed_steps", []) }
                 })
                 
-                # Regex to find typical C++ function definition
                 pattern = rf"(?m)^([ \t]*)([\w\:]+[ \t\*\&]+{re.escape(func_name)}[ \t]*\(.*?\)[ \t\n]*\{{)"
                 
                 def replacer(match):
@@ -136,12 +122,9 @@ async def generate_comments(submission: CodeSubmission):
                     definition = match.group(2)
                     
                     block = indent + "/**\n"
-                    # 1. Base Summary (Now Powered by Local AI!)
                     for line in ai_intent.split('\n'):
-                        # wrap lines nicely or just print
                         block += indent + " * " + line.strip() + "\n"
                     
-                    # 2. Security Vulnerability Generation (Neurosymbolic Merge)
                     block += indent + " * \n"
                     block += indent + " * --- SECURITY ANALYSIS ---\n"
                     sec_flag = analyze_security_with_llm(func_name, submission.code, str(func_details.get("detailed_steps", [])))
@@ -154,7 +137,6 @@ async def generate_comments(submission: CodeSubmission):
                     
                 commented_code = re.sub(pattern, replacer, commented_code, count=1)
 
-        # Step 5: Combine and return
         return {
             "status": "success",
             "commented_code": commented_code,
@@ -167,5 +149,4 @@ async def generate_comments(submission: CodeSubmission):
 
 if __name__ == "__main__":
     import uvicorn
-    # Make sure to run the uvicorn server so it listens for the frontend
     uvicorn.run("backend:app", host="127.0.0.1", port=8000, reload=True)

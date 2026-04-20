@@ -27,30 +27,30 @@ require(['vs/editor/editor.main'], function() {
     
     const container = document.getElementById('editor-container');
     
-    monaco.editor.defineTheme('neuro-dark', {
-        base: 'vs-dark',
+    monaco.editor.defineTheme('neuro-light', {
+        base: 'vs',
         inherit: true,
         rules: [
             { token: 'comment', foreground: '64748b', fontStyle: 'italic' },
-            { token: 'keyword', foreground: '818cf8', fontStyle: 'bold' },
-            { token: 'string', foreground: '2dd4bf' },
-            { token: 'number', foreground: 'f472b6' },
-            { token: 'type', foreground: '22d3ee' }
+            { token: 'keyword', foreground: '4f46e5', fontStyle: 'bold' },
+            { token: 'string', foreground: '0891b2' },
+            { token: 'number', foreground: 'db2777' },
+            { token: 'type', foreground: '0284c7' }
         ],
         colors: {
-            'editor.background': '#111827', 
-            'editor.foreground': '#f8fafc',
-            'editorLineNumber.foreground': '#475569',
-            'editor.lineHighlightBackground': '#1e293b', 
-            'editor.selectionBackground': '#334155',
-            'editorCursor.foreground': '#22d3ee',
+            'editor.background': '#f8fafc',
+            'editor.foreground': '#1e293b',
+            'editorLineNumber.foreground': '#94a3b8',
+            'editor.lineHighlightBackground': '#f1f5f9',
+            'editor.selectionBackground': '#c7d2fe',
+            'editorCursor.foreground': '#6366f1',
         }
     });
 
     editorInstance = monaco.editor.create(container, {
         value: DEFAULT_CODE,
         language: 'cpp',
-        theme: 'neuro-dark',
+        theme: 'neuro-light',
         automaticLayout: true,
         fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
         fontSize: 14,
@@ -66,7 +66,7 @@ require(['vs/editor/editor.main'], function() {
     outputEditorInstance = monaco.editor.create(document.getElementById('output-editor'), {
         value: "// Generated code will appear here...",
         language: 'cpp',
-        theme: 'neuro-dark',
+        theme: 'neuro-light',
         automaticLayout: true,
         fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
         fontSize: 14,

@@ -1,0 +1,37 @@
+# ============================================================
+#  NeuroSymbolic C++ Code Comment Generation System
+#  Requirements
+# ============================================================
+
+# --- Web Backend ---
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.0.0
+
+# --- ML / Fine-Tuning (run on Google Colab / GPU machine) ---
+# Unsloth provides fast 4-bit LoRA fine-tuning for Llama models
+unsloth                      # installs via: pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
+trl>=0.8.6                   # SFTTrainer for supervised fine-tuning
+transformers>=4.40.0         # HuggingFace Transformers
+datasets>=2.19.0             # HuggingFace Datasets (used in finetune_llama.py + ml_dataset_builder.py)
+accelerate>=0.29.0           # Required backend for transformers Trainer
+bitsandbytes>=0.43.0         # 4-bit / 8-bit quantisation kernels
+
+# --- Progress Bar ---
+tqdm>=4.66.0
+
+# ============================================================
+#  External / System Dependencies (NOT pip-installable)
+# ============================================================
+#
+#  1. Clang / clang++ (for AST generation)
+#     Windows : https://releases.llvm.org/download.html
+#     Ubuntu  : sudo apt-get install clang
+#
+#  2. Ollama  (local LLM inference server)
+#     https://ollama.com/download
+#     After install, pull / create the model:
+#       ollama create neurosymbolic_AI -f Modelfile
+#
+#  3. Python >= 3.10 recommended
+# ============================================================

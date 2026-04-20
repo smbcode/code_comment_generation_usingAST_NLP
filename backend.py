@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
@@ -7,8 +8,19 @@ import os
 import re
 import urllib.request
 import urllib.parse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI(title="NeuroAST Backend")
+
+
+# Mount the "static" directory to the "/static" URL path
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/static/index.html")
+
 
 app.add_middleware(
     CORSMiddleware,
